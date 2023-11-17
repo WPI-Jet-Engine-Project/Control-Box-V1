@@ -1,38 +1,32 @@
-// 8-bit PWM out
+// PWM out, in microseconds
 // 10-bit ADC in
-
-// TODO: Minimize use of float operations without losing precision by doing some funky math shenanigans
+#include <Servo.h>
 
 // Function Prototypes
-void setDutyCycle(float percentage);
+void setDutyCycle(int throttle);
 
 // pwmPin can be either 3 or 11 in order to use timer 2 for proper pwm configuration
-int pwmPin = 3;
+int pwmPin = 9;
 
 int armingSwitchPin = 14;
 int throttlePin = A1;
 
-int trimValue = 64;
+
+Servo mockReceiver;
 
 void setup() {
   pinMode (pwmPin, OUTPUT);
 
-  // Reset prescalers
-  GTCCR = bit (PSRASY);        // reset prescaler now
 
-  // mode 15
-  TCCR2A = bit (WGM20) | bit (WGM21) | bit (COM2B1); // fast PWM, clear OC2B on compare
+  // Try to use servo's default 50Hz PWM signal to mock the FrSky receiver
+  // 1.1ms and 1.71ms are the min and max pulse width, but this didn't seem to change anything
+  mockReceiver.attach(pwmPin, 1100, 1725);
   
-  // start Timer 2
-  TCCR2B = bit (WGM22) | bit (CS20) | bit (CS22); // prescaler of 128
-  // 16,000,000 Hz / 128 (prescaler) = 125,000 / 50Hz = 2500 timer ticks per PWM pulse
-  OCR2A = 2500 - 1;
-  // The clock counts up to 2500 and then jumps down to zero (sawtooth wave)
-  // When that counter is above the set value for OCR2B, the pulse width is set high.
-  // Therefore, to set the duty cycle in %, you need to do a little math (see function below)
-  OCR2B = 2500; // 0% duty cycle to start
-  }  // end of setup
+
+
+  sei();        // re-allow interrupts.
   Serial.begin(9600);
+  // end of setup
 }
 
 /* Max throttle increases duty cycle by 2.25%
@@ -42,17 +36,16 @@ void setup() {
 
 void loop() {
   if(digitalRead(armingSwitchPin)){
+    // Throttle reading from 0-1023 (13.5mV to 5.03 V)
     int throttleRead = analogRead(throttlePin);
-    // TODO: With default trim of 64 (trimValue variable), calculate what the % duty cycle is and set it
-    setDutyCycle(0.0575);
+    // 87 and 139 are manually tuned bound because setting min/max pulse width didn't seem to work.
+    // 87 degrees on the servo corresponds to a 1.35 ms pulse width (zero throttle with trim)
+    // 139 degrees on the servo corresponds to a 1.725 ms pulse width (max throttle with trim)
+    int mappedVal = map(throttleRead, 0, 1023, 87, 139);
+    Serial.println(mappedVal);
+    mockReceiver.write(mappedVal);
   } else{
-    setDutyCycle(0);
+  // No signal should be sent if the arming switch is not on
+  mockReceiver.write(0);
   }
-}
-
-void setDutyCycle(float percentage){
-  // The clock counts up to 2500 (for 50Hz) and then jumps down to zero (sawtooth wave)
-  // When that counter is above the set value for OCR2B, the pulse width is set high.
-  // Therefore, to set the duty cycle in %, you need to multiply the max (2500) by (1-%)
-  OCR2B = (int) (2500*(1-percentage));
 }
