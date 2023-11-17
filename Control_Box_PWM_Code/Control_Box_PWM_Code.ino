@@ -41,9 +41,9 @@ void loop() {
     // 87 and 139 are manually tuned bound because setting min/max pulse width didn't seem to work.
     // 87 degrees on the servo corresponds to a 1.35 ms pulse width (zero throttle with trim)
     // 139 degrees on the servo corresponds to a 1.725 ms pulse width (max throttle with trim)
-    int mappedVal = map(throttleRead, 0, 1023, 87, 139);
+    int mappedVal = map(throttleRead, 0, 1023, 1350, 1725);
     Serial.println(mappedVal);
-    mockReceiver.write(mappedVal);
+    mockReceiver.writeMicroseconds(mappedVal);
   } else{
   // No signal should be sent if the arming switch is not on
   mockReceiver.write(0);
