@@ -5,33 +5,28 @@
 // Function Prototypes
 void setDutyCycle(int throttle);
 
-// pwmPin can be either 3 or 11 in order to use timer 2 for proper pwm configuration
+// pwmPin is pin 9 so that the Servo library can use Timer 1 in the background
 int pwmPin = 9;
 
 int armingSwitchPin = 14;
 int throttlePin = A1;
-
 
 Servo mockReceiver;
 
 void setup() {
   pinMode (pwmPin, OUTPUT);
 
-
   // Try to use servo's default 50Hz PWM signal to mock the FrSky receiver
   // 1.1ms and 1.71ms are the min and max pulse width, but this didn't seem to change anything
   mockReceiver.attach(pwmPin, 1100, 1725);
   
-
-
-  sei();        // re-allow interrupts.
   Serial.begin(9600);
   // end of setup
 }
 
-/* Max throttle increases duty cycle by 2.25%
- * Trim increases duty cycle by ~0.005%/tick
- * Base duty cycle is 5.75%
+/* Max throttle increases pulse width by almost 400 us
+ * Trim increases pulse width by ~4us/tick
+ * Base signal is 1100 us
  */
 
 void loop() {
